@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <array>
+
 /*     |
  *  NW | NE x
  * ----+---->
@@ -63,61 +65,26 @@ struct NodeArea
 template <typename T>
 class QuadtreeNode {
     public:
-    QuadtreeNode(int x, int y, int w, int h) :
-        QuadtreeNode(x, y, w, h, NULL, NULL, NULL, NULL)
-    {
-    }
-
-    QuadtreeNode(int x, int y, int w, int h, QuadtreeNode *c_nw, QuadtreeNode *c_ne,
-             QuadtreeNode *c_sw, QuadtreeNode *c_se) :
-        parent_(NULL),
-        area_(x, y, w, h),
-        children_{c_nw, c_ne, c_sw, c_se}
-    {
-    }
-
-    QuadtreeNode(NodeArea area, QuadtreeNode **children) :
-        parent_(NULL),
-        area_(area)
-    {
-        children_[0] = children[0];
-        children_[1] = children[1];
-        children_[2] = children[2];
-        children_[3] = children[3];
-    }
-
-    QuadtreeNode(NodeArea area, QuadtreeNode *parent, QuadtreeNode *c_nw, QuadtreeNode *c_ne,
-             QuadtreeNode *c_sw, QuadtreeNode *c_se) :
+    QuadtreeNode(QuadtreeNode *parent, NodeArea area,
+                 std::array<QuadtreeNode *, 4> children) :
         parent_(parent),
         area_(area),
-        children_{c_nw, c_ne, c_sw, c_se}
+        children_(children)
     {
-        /*
-        printf("%s: ax: %d, ay: %d, aw: %d, ah: %d\n", __func__, area.x,
-               area.y, area.w, area.h);
-        printf("%s: ax: %d, ay: %d, aw: %d, ah: %d\n", __func__, area_.x,
-               area_.y, area_.w, area_.h);
-        */
+    }
+
+    QuadtreeNode(NodeArea area) :
+        QuadtreeNode(nullptr, area, {nullptr, nullptr, nullptr, nullptr})
+    {
     }
 
     QuadtreeNode(NodeArea area, QuadtreeNode *parent) :
         parent_(parent),
         area_(area),
-        children_{NULL, NULL, NULL, NULL}
+        children_{{nullptr, nullptr, nullptr, nullptr}}
     {
-        /*
-        printf("%s: ax: %d, ay: %d, aw: %d, ah: %d\n", __func__, area.x,
-               area.y, area.w, area.h);
-        printf("%s: ax: %d, ay: %d, aw: %d, ah: %d\n", __func__, area_.x,
-               area_.y, area_.w, area_.h);
-        */
     }
  
-    QuadtreeNode(T data) :
-        parent_(NULL),
-        data_(data)
-    {
-    }
 
     /* x and y are used for finding the place in the structure */
     void insert(T data, int x, int y)
@@ -128,7 +95,7 @@ class QuadtreeNode {
         printf("parent_: %p\n", parent_);
         */
         if (!area_.is_inside(x, y)) {
-            printf("not inside: %p, area: %d, %d, %d, %d\n", this, area_.x,
+            printf("not inside: %p, area: %d, %d, %d, %d\n", (void *)this, area_.x,
                    area_.y, area_.w, area_.h);
             assert(0);
         }
@@ -179,7 +146,7 @@ class QuadtreeNode {
     {
     }
     NodeArea area_;
-    QuadtreeNode<T> *children_[4];
+    std::array<QuadtreeNode<T> *, 4> children_;
     T data_;
 };
 
@@ -193,7 +160,7 @@ class Quadtree {
 
     Quadtree(int x, int y, int w, int h)
     {
-        root_node_ = new QuadtreeNode<T>(x, y, w, h);
+        root_node_ = new QuadtreeNode<T>(NodeArea(x, y, w, h));
     }
 
     QuadtreeNode<T> *get_child(const Quadrant q)
@@ -205,7 +172,7 @@ class Quadtree {
     void insert(T data, int x, int y)
     {
         if (!root_node_)
-            root_node_ = new QuadtreeNode<T>(x, y, 1, 1);
+            root_node_ = new QuadtreeNode<T>(NodeArea(x, y, 1, 1));
 
         /*
         printf("inserting into %d, %d\n", x, y);
@@ -226,12 +193,13 @@ class Quadtree {
             printf("to:\t\t\t\t%d,\t%d,\t%d,\t%d\n", new_area.x, new_area.y, new_area.w, new_area.h);
             */
 
-            QuadtreeNode<T> *new_children[4] = {NULL, NULL, NULL, NULL}; 
+            std::array<QuadtreeNode<T> *, 4> new_children {{NULL, NULL, NULL, NULL}};
             auto q = new_area.get_quadrant(area.x, area.y);
             assert(q != Quadrant::NONE);
             new_children[q] = root_node_;
 
-            QuadtreeNode<T> *new_root_node = new QuadtreeNode<T>(new_area,
+            QuadtreeNode<T> *new_root_node = new QuadtreeNode<T>(nullptr,
+                                                                 new_area,
                                                                  new_children);
             root_node_->parent_ = new_root_node;
             root_node_ = new_root_node;
@@ -272,7 +240,7 @@ int main(int argc, char *argv[])
     {
         printf("Simple case\n");
         int se_data = 'se';
-        QuadtreeNode<int> root(-1, -1, 2, 2);
+        QuadtreeNode<int> root(NodeArea(-1, -1, 2, 2));
         root.insert(se_data, 0, 0);
         assert(root.get_child(Quadrant::SE) != NULL);
         assert(root.get_child(Quadrant::SE)->get_data() == 'se');
@@ -281,7 +249,7 @@ int main(int argc, char *argv[])
     {
         printf("Multi level tree\n");
         int se_data = 'se';
-        QuadtreeNode<int> root(-2, -2, 4, 4);
+        QuadtreeNode<int> root(NodeArea(-2, -2, 4, 4));
         root.insert(se_data, 0, 0);
         assert(root.get_child(Quadrant::SE) != NULL);
         assert(root.get_child(Quadrant::SE)->get_child(Quadrant::NW) != NULL);
