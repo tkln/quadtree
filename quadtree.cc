@@ -18,7 +18,6 @@ enum Quadrant : ssize_t {
 
 struct NodeArea
 {
-    NodeArea() : NodeArea(0, 0, 0, 0) { }
     NodeArea(int x, int y, int w, int h) : x(x), y(y), w(w), h(h) { }
     inline bool is_inside(int qx, int qy) const
     {
@@ -71,6 +70,11 @@ class QuadtreeNode {
         area_(area),
         children_(children)
     {
+        for (auto &child : children_) {
+            if (!child)
+                continue;
+            child->parent_ = this;
+        }
     }
 
     QuadtreeNode(NodeArea area) :
@@ -89,11 +93,6 @@ class QuadtreeNode {
     /* x and y are used for finding the place in the structure */
     void insert(T data, int x, int y)
     {
-        /*
-        printf("%s: x: %d, y: %d, ax: %d, ay: %d, aw: %d, ah: %d\n",
-                __func__, x, y, area_.x, area_.y, area_.w, area_.h);
-        printf("parent_: %p\n", parent_);
-        */
         if (!area_.is_inside(x, y)) {
             printf("not inside: %p, area: %d, %d, %d, %d\n", (void *)this, area_.x,
                    area_.y, area_.w, area_.h);
@@ -122,6 +121,8 @@ class QuadtreeNode {
 
     QuadtreeNode *get_child(Quadrant q) { return children_[q]; }
     T get_data() { return data_; }
+    const NodeArea &get_area() const { return area_; }
+    const QuadtreeNode *get_parent() const { return parent_; }
     void print_status() const
     {
         printf("this: %p\n", this);
@@ -132,19 +133,9 @@ class QuadtreeNode {
         printf("SW: %p\n", children_[Quadrant::SW]);
         printf("SE: %p\n", children_[Quadrant::SE]);
     }
-    const NodeArea &get_area() const
-    {
-        return area_;
-    }
 
-    QuadtreeNode<T> *parent_;
     private:
-    /* Inner node */
-    QuadtreeNode(QuadtreeNode *parent, T *c_nw, T *c_ne, T *c_sw, T *c_se) :
-        parent_(parent),
-        children_{c_nw, c_ne, c_sw, c_se}
-    {
-    }
+    QuadtreeNode<T> *parent_;
     NodeArea area_;
     std::array<QuadtreeNode<T> *, 4> children_;
     T data_;
@@ -174,10 +165,6 @@ class Quadtree {
         if (!root_node_)
             root_node_ = new QuadtreeNode<T>(NodeArea(x, y, 1, 1));
 
-        /*
-        printf("inserting into %d, %d\n", x, y);
-        */
-
         while (!root_node_->get_area().is_inside(x, y)) {
             const auto &area = root_node_->get_area();
             int nx = area.x;
@@ -188,11 +175,6 @@ class Quadtree {
             }
             const NodeArea new_area(nx, ny, area.w * 2, area.h * 2);
 
-            /*
-            printf("expanding the root from:\t%d,\t%d,\t%d,\t%d\n", area.x, area.y, area.w, area.h);
-            printf("to:\t\t\t\t%d,\t%d,\t%d,\t%d\n", new_area.x, new_area.y, new_area.w, new_area.h);
-            */
-
             std::array<QuadtreeNode<T> *, 4> new_children {{NULL, NULL, NULL, NULL}};
             auto q = new_area.get_quadrant(area.x, area.y);
             assert(q != Quadrant::NONE);
@@ -201,7 +183,6 @@ class Quadtree {
             QuadtreeNode<T> *new_root_node = new QuadtreeNode<T>(nullptr,
                                                                  new_area,
                                                                  new_children);
-            root_node_->parent_ = new_root_node;
             root_node_ = new_root_node;
         }
 
@@ -212,6 +193,10 @@ class Quadtree {
         assert(root_node_);
         root_node_->print_status();
     }
+    const QuadtreeNode<T> *get_root(void) const
+    {
+        return root_node_;
+    }
     private:
     QuadtreeNode<T> *root_node_;
 };
@@ -219,7 +204,7 @@ class Quadtree {
 int main(int argc, char *argv[])
 {
     {
-        NodeArea a (0, 0, 1, 1);
+        NodeArea a(0, 0, 1, 1);
         assert(a.is_inside(0, 0));
         assert(!a.is_inside(1, 1));
     }
@@ -267,9 +252,18 @@ int main(int argc, char *argv[])
         /* The internal node on the way to (2, 2) */
         assert(root.get_child(Quadrant::SE) != NULL);
 
+        /* Making sure parents are correct */
+        assert(root.get_child(Quadrant::SE)->get_parent() == root.get_root());
+        assert(root.get_child(Quadrant::NW)->get_parent() == root.get_root());
+
         /* The (2, 2) node */
         assert(root.get_child(Quadrant::SE)->get_child(Quadrant::NW) != NULL);
         assert(root.get_child(Quadrant::SE)->get_child(Quadrant::NW)->get_data() == 'se');
+
+        /* Making sure parents are correct */
+        assert(root.get_child(Quadrant::SE)->get_child(Quadrant::NW)->get_parent() ==
+               root.get_child(Quadrant::SE));
+
     }
     {
         printf("\nMultilevel expansion of root\n");
