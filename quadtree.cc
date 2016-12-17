@@ -236,9 +236,10 @@ int main(int argc, char *argv[])
         int se_data = 'se';
         QuadtreeNode<int> root(NodeArea(-2, -2, 4, 4));
         root.insert(se_data, 0, 0);
-        assert(root.get_child(Quadrant::SE) != NULL);
-        assert(root.get_child(Quadrant::SE)->get_child(Quadrant::NW) != NULL);
-        assert(root.get_child(Quadrant::SE)->get_child(Quadrant::NW)->get_data() == 'se');
+        auto se = root.get_child(Quadrant::SE);
+        assert(se != NULL);
+        assert(se->get_child(Quadrant::NW) != NULL);
+        assert(se->get_child(Quadrant::NW)->get_data() == 'se');
     }
     {
         printf("\nExpansion of root\n");
@@ -247,22 +248,25 @@ int main(int argc, char *argv[])
 
         root.insert(se_data, 2, 2);
 
+        auto se = root.get_child(Quadrant::SE);
+
         /* The original root node */
         assert(root.get_child(Quadrant::NW) != NULL);
         /* The internal node on the way to (2, 2) */
-        assert(root.get_child(Quadrant::SE) != NULL);
+        assert(se != NULL);
 
         /* Making sure parents are correct */
-        assert(root.get_child(Quadrant::SE)->get_parent() == root.get_root());
+        assert(se->get_parent() == root.get_root());
         assert(root.get_child(Quadrant::NW)->get_parent() == root.get_root());
 
+        auto senw = se->get_child(Quadrant::NW);
+
         /* The (2, 2) node */
-        assert(root.get_child(Quadrant::SE)->get_child(Quadrant::NW) != NULL);
-        assert(root.get_child(Quadrant::SE)->get_child(Quadrant::NW)->get_data() == 'se');
+        assert(senw != NULL);
+        assert(senw->get_data() == 'se');
 
         /* Making sure parents are correct */
-        assert(root.get_child(Quadrant::SE)->get_child(Quadrant::NW)->get_parent() ==
-               root.get_child(Quadrant::SE));
+        assert(senw->get_parent() == root.get_child(Quadrant::SE));
 
     }
     {
@@ -277,8 +281,9 @@ int main(int argc, char *argv[])
         assert(root.get_child(Quadrant::NW)->get_child(Quadrant::NW) != NULL);
         /* The internal nodes on the way to (2, 3) */
         assert(root.get_child(Quadrant::SE) != NULL);
-        assert(root.get_child(Quadrant::SE)->get_child(Quadrant::NW)->get_child(Quadrant::SW) != NULL);
-        assert(root.get_child(Quadrant::SE)->get_child(Quadrant::NW)->get_child(Quadrant::SW)->get_data() == 'se');
+        auto senw = root.get_child(Quadrant::SE)->get_child(Quadrant::NW);
+        assert(senw->get_child(Quadrant::SW) != NULL);
+        assert(senw->get_child(Quadrant::SW)->get_data() == 'se');
     }
     {
         printf("\nExpansion of root into negative direction\n");
@@ -288,8 +293,9 @@ int main(int argc, char *argv[])
         root.insert(se_data, -2, -2);
 
         assert(root.get_child(Quadrant::NW) != NULL);
-        assert(root.get_child(Quadrant::NW)->get_child(Quadrant::NW) != NULL);
-        assert(root.get_child(Quadrant::NW)->get_child(Quadrant::NW)->get_data() == 'se');
+        auto nwnw = root.get_child(Quadrant::NW)->get_child(Quadrant::NW);
+        assert(nwnw != NULL);
+        assert(nwnw->get_data() == 'se');
     }
     {
         printf("\nMultilevel expansion of root into negative direction\n");
@@ -299,9 +305,10 @@ int main(int argc, char *argv[])
         root.insert(se_data, -3, -3);
 
         assert(root.get_child(Quadrant::NW) != NULL);
-        assert(root.get_child(Quadrant::NW)->get_child(Quadrant::SE) != NULL);
-        assert(root.get_child(Quadrant::NW)->get_child(Quadrant::SE)->get_child(Quadrant::SE) != NULL);
-        assert(root.get_child(Quadrant::NW)->get_child(Quadrant::SE)->get_child(Quadrant::SE)->get_data() == 'se');
+        auto nwse = root.get_child(Quadrant::NW)->get_child(Quadrant::SE);
+        assert(nwse != NULL);
+        assert(nwse->get_child(Quadrant::SE) != NULL);
+        assert(nwse->get_child(Quadrant::SE)->get_data() == 'se');
     }
     {
         printf("\nMultilevel expansion of root with previous stuff\n");
@@ -317,10 +324,13 @@ int main(int argc, char *argv[])
         /* The original root node */
         assert(root.get_child(Quadrant::NW) != NULL);
         assert(root.get_child(Quadrant::NW)->get_child(Quadrant::NW) != NULL);
-        /* The internal nodes on the way to (2, 3) */
+
         assert(root.get_child(Quadrant::SE) != NULL);
-        assert(root.get_child(Quadrant::SE)->get_child(Quadrant::NW)->get_child(Quadrant::SW) != NULL);
-        assert(root.get_child(Quadrant::SE)->get_child(Quadrant::NW)->get_child(Quadrant::SW)->get_data() == 'se');
+        auto senw = root.get_child(Quadrant::SE)->get_child(Quadrant::NW);
+
+        /* The internal nodes on the way to (2, 3) */
+        assert(senw->get_child(Quadrant::SW) != NULL);
+        assert(senw->get_child(Quadrant::SW)->get_data() == 'se');
     }
     return EXIT_SUCCESS;
 }
