@@ -89,7 +89,6 @@ class QuadtreeNode {
     {
     }
  
-
     /* x and y are used for finding the place in the structure */
     void insert(T data, int x, int y)
     {
@@ -112,6 +111,19 @@ class QuadtreeNode {
         children_[q]->insert(data, x, y);
     }
 
+    const QuadtreeNode *search(int x, int y) const
+    {
+        auto c = children_[area_.get_quadrant(x, y)];
+
+        if (x == area_.x && y == area_.y)
+            return this;
+
+        if (!c)
+            return NULL;
+
+        return c->search(x, y);
+    }
+
     const QuadtreeNode *get_child(Quadrant q) const
     {
         if (q == Quadrant::NONE)
@@ -120,7 +132,7 @@ class QuadtreeNode {
     }
 
     QuadtreeNode *get_child(Quadrant q) { return children_[q]; }
-    T get_data() { return data_; }
+    const T get_data() const { return data_; }
     const NodeArea &get_area() const { return area_; }
     const QuadtreeNode *get_parent() const { return parent_; }
     void print_status() const
@@ -196,6 +208,12 @@ class Quadtree {
     const QuadtreeNode<T> *get_root(void) const
     {
         return root_node_;
+    }
+    const QuadtreeNode<T> *search(int x, int y) const
+    {
+        if (!root_node_)
+            return nullptr;
+        return root_node_->search(x, y);
     }
     private:
     QuadtreeNode<T> *root_node_;
@@ -331,6 +349,48 @@ int main(int argc, char *argv[])
         /* The internal nodes on the way to (2, 3) */
         assert(senw->get_child(Quadrant::SW) != NULL);
         assert(senw->get_child(Quadrant::SW)->get_data() == 'se');
+    }
+    {
+        printf("\nSearch\n");
+        int first = 'fi';
+        int second = 'se';
+        Quadtree<int> root(0, 0, 4, 4);
+
+        root.insert(first, 1, 1);
+        root.insert(second, 2, 1);
+        assert(root.search(1, 1) != NULL);
+        assert(root.search(2, 1) != NULL);
+        assert(root.search(1, 2) == NULL);
+        assert(root.search(1, 1)->get_data() == first);
+        assert(root.search(2, 1)->get_data() == second);
+    }
+    {
+        printf("\nSearch after expansion\n");
+        int first = 'fi';
+        int second = 'se';
+        Quadtree<int> root(-2, -2, 2, 2);
+
+        root.insert(first, -2, -1);
+        assert(root.get_child(Quadrant::SW)->get_data() == 'fi');
+
+        root.insert(second, 2, 3);
+
+        /* The original root node */
+        assert(root.get_child(Quadrant::NW) != NULL);
+        assert(root.get_child(Quadrant::NW)->get_child(Quadrant::NW) != NULL);
+
+        assert(root.get_child(Quadrant::SE) != NULL);
+        auto senw = root.get_child(Quadrant::SE)->get_child(Quadrant::NW);
+
+        /* The internal nodes on the way to (2, 3) */
+        assert(senw->get_child(Quadrant::SW) != NULL);
+        assert(senw->get_child(Quadrant::SW)->get_data() == 'se');
+
+        assert(root.search(-2, -1) != NULL);
+        assert(root.search(2, 3) != NULL);
+        assert(root.search(1, 2) == NULL);
+        assert(root.search(-2, -1)->get_data() == first);
+        assert(root.search(2, 3)->get_data() == second);
     }
     return EXIT_SUCCESS;
 }
