@@ -3,10 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <array>
-#include <functional>
-#include <memory>
-
 #include "quadtree.h"
 
 int main(int argc, char *argv[])
