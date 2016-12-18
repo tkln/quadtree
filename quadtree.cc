@@ -5,6 +5,7 @@
 
 #include <array>
 #include <functional>
+#include <memory>
 
 /*     |
  *  NW | NE x
@@ -61,27 +62,23 @@ struct NodeArea
 };
 
 /* Each leaf contains 1 by 1 area */
-
 template <typename T>
 class QuadtreeNode {
     public:
-    QuadtreeNode(QuadtreeNode *parent, NodeArea area,
-                 std::array<QuadtreeNode *, 4> children) :
-        parent_(parent),
-        area_(area),
-        children_(children)
+    QuadtreeNode(NodeArea area,
+                 std::array<std::unique_ptr<QuadtreeNode>, 4> &children) :
+        parent_(nullptr),
+        area_(area)
     {
-        for (auto &child : children_) {
-            if (!child)
+        for (size_t i = 0; i < children_.size(); ++i) {
+            if (!children[i])
                 continue;
-            child->parent_ = this;
+            children_[i] = std::move(children[i]);
+            children_[i]->parent_ = this;
         }
     }
 
-    QuadtreeNode(NodeArea area) :
-        QuadtreeNode(nullptr, area, {nullptr, nullptr, nullptr, nullptr})
-    {
-    }
+    QuadtreeNode(NodeArea area) : QuadtreeNode(area, nullptr) { }
 
     QuadtreeNode(NodeArea area, QuadtreeNode *parent) :
         parent_(parent),
@@ -94,8 +91,8 @@ class QuadtreeNode {
     QuadtreeNode *insert(T data, int x, int y)
     {
         if (!area_.is_inside(x, y)) {
-            printf("not inside: %p, area: %d, %d, %d, %d\n", (void *)this, area_.x,
-                   area_.y, area_.w, area_.h);
+            printf("not inside: %p, area: %d, %d, %d, %d\n", (void *)this,
+                   area_.x, area_.y, area_.w, area_.h);
             assert(0);
         }
 
@@ -107,14 +104,16 @@ class QuadtreeNode {
         auto q = area_.get_quadrant(x, y);
         assert(q != Quadrant::NONE);
 
-        if (!children_[q])
-            children_[q] = new QuadtreeNode(area_.get_quadrant_area(q), this);
+        if (!children_[q]) {
+            auto area = area_.get_quadrant_area(q);
+            children_[q] = std::make_unique<QuadtreeNode>(area, this);
+        }
         return children_[q]->insert(data, x, y);
     }
 
     const QuadtreeNode *search(int x, int y) const
     {
-        auto c = children_[area_.get_quadrant(x, y)];
+        auto c = children_[area_.get_quadrant(x, y)].get();
 
         if (x == area_.x && y == area_.y)
             return this;
@@ -147,7 +146,7 @@ class QuadtreeNode {
         return children_[q];
     }
 
-    QuadtreeNode *get_child(Quadrant q) { return children_[q]; }
+    QuadtreeNode *get_child(Quadrant q) { return children_[q].get(); }
     const T get_data() const { return data_; }
     const NodeArea &get_area() const { return area_; }
     const QuadtreeNode *get_parent() const { return parent_; }
@@ -163,23 +162,20 @@ class QuadtreeNode {
     }
 
     private:
-    QuadtreeNode<T> *parent_;
+    QuadtreeNode *parent_;
     NodeArea area_;
-    std::array<QuadtreeNode<T> *, 4> children_;
+    std::array<std::unique_ptr<QuadtreeNode>, 4> children_;
     T data_;
 };
 
 template <typename T>
 class Quadtree {
     public:
-    Quadtree() :
-        root_node_(NULL)
-    {
-    }
+    Quadtree() : root_node_(NULL) { }
 
     Quadtree(int x, int y, int w, int h)
     {
-        root_node_ = new QuadtreeNode<T>(NodeArea(x, y, w, h));
+        root_node_ = std::make_unique<QuadtreeNode<T>>(NodeArea(x, y, w, h));
     }
 
     QuadtreeNode<T> *get_child(const Quadrant q)
@@ -188,10 +184,11 @@ class Quadtree {
             return NULL;
         return root_node_->get_child(q);
     }
+
     void insert(T data, int x, int y)
     {
         if (!root_node_)
-            root_node_ = new QuadtreeNode<T>(NodeArea(x, y, 1, 1));
+            root_node_ = std::make_unique<QuadtreeNode<T>>(NodeArea(x, y, 1, 1));
 
         while (!root_node_->get_area().is_inside(x, y)) {
             const auto &area = root_node_->get_area();
@@ -203,28 +200,28 @@ class Quadtree {
             }
             const NodeArea new_area(nx, ny, area.w * 2, area.h * 2);
 
-            std::array<QuadtreeNode<T> *, 4> new_children {{NULL, NULL, NULL, NULL}};
+            std::array<std::unique_ptr<QuadtreeNode<T>>, 4> new_children{};
             auto q = new_area.get_quadrant(area.x, area.y);
             assert(q != Quadrant::NONE);
-            new_children[q] = root_node_;
+            new_children[q] = std::move(root_node_);
 
-            QuadtreeNode<T> *new_root_node = new QuadtreeNode<T>(nullptr,
-                                                                 new_area,
-                                                                 new_children);
-            root_node_ = new_root_node;
+            root_node_ = std::make_unique<QuadtreeNode<T>>(new_area, new_children);
         }
 
         root_node_->insert(data, x, y);
     }
+
     void print_status()
     {
         assert(root_node_);
         root_node_->print_status();
     }
+
     const QuadtreeNode<T> *get_root(void) const
     {
-        return root_node_;
+        return root_node_.get();
     }
+
     const QuadtreeNode<T> *search(int x, int y) const
     {
         if (!root_node_)
@@ -246,7 +243,7 @@ class Quadtree {
     }
 
     private:
-    QuadtreeNode<T> *root_node_;
+    std::unique_ptr<QuadtreeNode<T>> root_node_;
 };
 
 int main(int argc, char *argv[])
