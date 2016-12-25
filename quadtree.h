@@ -116,7 +116,7 @@ class QuadtreeNode {
             return this;
 
         if (!c)
-            return NULL;
+            return nullptr;
 
         return c->search(x, y);
     }
@@ -167,7 +167,7 @@ class QuadtreeNode {
 template <typename T>
 class Quadtree {
     public:
-    Quadtree() : root_node_(NULL) { }
+    Quadtree() : root_node_(nullptr) { }
 
     Quadtree(int x, int y, int w, int h)
     {
