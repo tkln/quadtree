@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
         printf("Simple case\n");
         int se_data = 'se';
         QuadtreeNode<int> root(NodeArea(-1, -1, 2, 2));
-        root.insert(se_data, 0, 0);
+        root.insert(0, 0, se_data);
         assert(root.get_child(Quadrant::SE) != NULL);
         assert(root.get_child(Quadrant::SE)->get_data() == 'se');
         assert(root.get_child(Quadrant::NE) == NULL);
@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
         printf("Multi level tree\n");
         int se_data = 'se';
         QuadtreeNode<int> root(NodeArea(-2, -2, 4, 4));
-        root.insert(se_data, 0, 0);
+        root.insert(0, 0, se_data);
         auto se = root.get_child(Quadrant::SE);
         assert(se != NULL);
         assert(se->get_child(Quadrant::NW) != NULL);
@@ -48,9 +48,10 @@ int main(int argc, char *argv[])
     {
         printf("\nExpansion of root\n");
         int se_data = 'se';
-        Quadtree<int> root(0, 0, 2, 2);
+        auto root_node = std::make_unique<QuadtreeNode<int>>(NodeArea(0, 0, 2, 2));
+        Quadtree<int> root(std::move(root_node));
 
-        root.insert(se_data, 2, 2);
+        root.insert(2, 2, se_data);
 
         auto se = root.get_child(Quadrant::SE);
 
@@ -76,9 +77,11 @@ int main(int argc, char *argv[])
     {
         printf("\nMultilevel expansion of root\n");
         int se_data = 'se';
-        Quadtree<int> root(-2, -2, 1, 1);
+        auto area = NodeArea(-2, -2, 1, 1);
+        auto root_node = std::make_unique<QuadtreeNode<int>>(area);
+        Quadtree<int> root(std::move(root_node));
 
-        root.insert(se_data, 2, 3);
+        root.insert(2, 3, se_data);
 
         /* The original root node */
         assert(root.get_child(Quadrant::NW) != NULL);
@@ -92,9 +95,11 @@ int main(int argc, char *argv[])
     {
         printf("\nExpansion of root into negative direction\n");
         int se_data = 'se';
-        Quadtree<int> root(0, 0, 2, 2);
+        auto area = NodeArea(0, 0, 2, 2);
+        auto root_node = std::make_unique<QuadtreeNode<int>>(area);
+        Quadtree<int> root(std::move(root_node));
 
-        root.insert(se_data, -2, -2);
+        root.insert(-2, -2, se_data);
 
         assert(root.get_child(Quadrant::NW) != NULL);
         auto nwnw = root.get_child(Quadrant::NW)->get_child(Quadrant::NW);
@@ -104,9 +109,11 @@ int main(int argc, char *argv[])
     {
         printf("\nMultilevel expansion of root into negative direction\n");
         int se_data = 'se';
-        Quadtree<int> root(0, 0, 2, 2);
+        auto area = NodeArea(0, 0, 2, 2);
+        auto root_node = std::make_unique<QuadtreeNode<int>>(area);
+        Quadtree<int> root(std::move(root_node));
 
-        root.insert(se_data, -3, -3);
+        root.insert(-3, -3, se_data);
 
         assert(root.get_child(Quadrant::NW) != NULL);
         auto nwse = root.get_child(Quadrant::NW)->get_child(Quadrant::SE);
@@ -118,12 +125,14 @@ int main(int argc, char *argv[])
         printf("\nMultilevel expansion of root with previous stuff\n");
         int first = 'fi';
         int second = 'se';
-        Quadtree<int> root(-2, -2, 2, 2);
+        auto area = NodeArea(-2, -2, 2, 2);
+        auto root_node = std::make_unique<QuadtreeNode<int>>(area);
+        Quadtree<int> root(std::move(root_node));
 
-        root.insert(first, -2, -1);
+        root.insert(-2, -1, first);
         assert(root.get_child(Quadrant::SW)->get_data() == 'fi');
 
-        root.insert(second, 2, 3);
+        root.insert(2, 3, second);
 
         /* The original root node */
         assert(root.get_child(Quadrant::NW) != NULL);
@@ -140,10 +149,10 @@ int main(int argc, char *argv[])
         printf("\nSearch\n");
         int first = 'fi';
         int second = 'se';
-        Quadtree<int> root(0, 0, 4, 4);
+        Quadtree<int> root/*(0, 0, 4, 4)*/;
 
-        root.insert(first, 1, 1);
-        root.insert(second, 2, 1);
+        root.insert(1, 1, first);
+        root.insert(2, 1, second);
         assert(root.search(1, 1) != NULL);
         assert(root.search(2, 1) != NULL);
         assert(root.search(1, 2) == NULL);
@@ -154,12 +163,14 @@ int main(int argc, char *argv[])
         printf("\nSearch after expansion\n");
         int first = 'fi';
         int second = 'se';
-        Quadtree<int> root(-2, -2, 2, 2);
+        auto area = NodeArea(-2, -2, 2, 2);
+        auto root_node = std::make_unique<QuadtreeNode<int>>(area);
+        Quadtree<int> root(std::move(root_node));
 
-        root.insert(first, -2, -1);
+        root.insert(-2, -1, first);
         assert(root.get_child(Quadrant::SW)->get_data() == 'fi');
 
-        root.insert(second, 2, 3);
+        root.insert(2, 3, second);
 
         /* The original root node */
         assert(root.get_child(Quadrant::NW) != NULL);
@@ -182,7 +193,7 @@ int main(int argc, char *argv[])
         printf("\nCache search\n");
         int first = 'fi';
         int second = 'se';
-        Quadtree<int> root(0, 0, 4, 4);
+        Quadtree<int> root/*(0, 0, 4, 4)*/;
 
         assert(root.search(1, 1) == NULL);
         assert(root.search(2, 1) == NULL);

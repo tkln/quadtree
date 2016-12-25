@@ -86,7 +86,7 @@ class QuadtreeNode {
     }
  
     /* x and y are used for finding the place in the structure */
-    QuadtreeNode *insert(T data, int x, int y)
+    QuadtreeNode *insert(int x, int y, T data)
     {
         if (!area_.is_inside(x, y))
             throw std::logic_error("Requested point not inside the search area");
@@ -104,7 +104,8 @@ class QuadtreeNode {
             auto area = area_.get_quadrant_area(q);
             children_[q] = std::make_unique<QuadtreeNode>(area, this);
         }
-        return children_[q]->insert(data, x, y);
+
+        return children_[q]->insert(x, y, std::move(data));
     }
 
     const QuadtreeNode *search(int x, int y) const
@@ -128,9 +129,8 @@ class QuadtreeNode {
         if (x == area_.x && y == area_.y)
             return this;
 
-        if (!children_[q]) {
-            return insert(gen_data(x, y), x, y);
-        }
+        if (!children_[q])
+            return insert(x, y, gen_data(x, y));
 
         return children_[q]->search(x, y);
     }
@@ -181,7 +181,7 @@ class Quadtree {
         return root_node_->get_child(q);
     }
 
-    void insert(T data, int x, int y)
+    QuadtreeNode<T> *insert(int x, int y, T data)
     {
         if (!root_node_)
             root_node_ = std::make_unique<QuadtreeNode<T>>(NodeArea(x, y, 1, 1));
@@ -205,7 +205,7 @@ class Quadtree {
             root_node_ = std::make_unique<QuadtreeNode<T>>(new_area, new_children);
         }
 
-        root_node_->insert(data, x, y);
+        return root_node_->insert(x, y, std::move(data));
     }
 
     void print_status()
