@@ -110,10 +110,15 @@ class QuadtreeNode {
 
     const QuadtreeNode *search(int x, int y) const
     {
-        auto c = children_[area_.get_quadrant(x, y)].get();
+        auto q = area_.get_quadrant(x, y);
 
-        if (x == area_.x && y == area_.y)
+        if (q == Quadrant::NONE)
+            throw std::logic_error("search: invalid quadrant");
+
+        if (area_.x == x && area_.y == y && area_.w == 1 && area_.h == 1)
             return this;
+
+        auto c = children_[q].get();
 
         if (!c)
             return nullptr;
@@ -126,13 +131,16 @@ class QuadtreeNode {
     {
         auto q = area_.get_quadrant(x, y);
 
-        if (x == area_.x && y == area_.y)
+        if (q == Quadrant::NONE)
+            throw std::logic_error("cache_search: invalid quadrant");
+
+        if (area_.x == x && area_.y == y && area_.w == 1 && area_.h == 1)
             return this;
 
         if (!children_[q])
             return insert(x, y, gen_data(x, y));
 
-        return children_[q]->search(x, y);
+        return children_[q]->cache_search(x, y, gen_data);
     }
 
     const QuadtreeNode *get_child(Quadrant q) const
@@ -143,7 +151,7 @@ class QuadtreeNode {
     }
 
     QuadtreeNode *get_child(Quadrant q) { return children_[q].get(); }
-    const T get_data() const { return data_; }
+    const T &get_data() const { return data_; }
     const NodeArea &get_area() const { return area_; }
     const QuadtreeNode *get_parent() const { return parent_; }
     void print_status() const
