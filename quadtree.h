@@ -186,24 +186,7 @@ class Quadtree {
         if (!root_node_)
             root_node_ = std::make_unique<QuadtreeNode<T>>(NodeArea(x, y, 1, 1));
 
-        while (!root_node_->get_area().is_inside(x, y)) {
-            const auto &area = root_node_->get_area();
-            int nx = area.x;
-            int ny = area.y;
-            if (x < area.x || y < area.y) {
-                nx -= area.w;
-                ny -= area.h;
-            }
-            const NodeArea new_area(nx, ny, area.w * 2, area.h * 2);
-
-            std::array<std::unique_ptr<QuadtreeNode<T>>, 4> new_children{};
-            auto q = new_area.get_quadrant(area.x, area.y);
-            if (q == Quadrant::NONE)
-                throw std::logic_error("Could not find the correct quadrant");
-            new_children[q] = std::move(root_node_);
-
-            root_node_ = std::make_unique<QuadtreeNode<T>>(new_area, new_children);
-        }
+        expand_root_(x, y);
 
         return root_node_->insert(x, y, std::move(data));
     }
@@ -235,12 +218,41 @@ class Quadtree {
     const QuadtreeNode<T> *cache_search(int x, int y,
                                         std::function<T(int x, int y)> gen_data)
     {
-        if (!root_node_)
-            return nullptr;
+        if (!root_node_) {
+            root_node_ = std::make_unique<QuadtreeNode<T>>(NodeArea(x, y, 1, 1));
+            expand_root_(x, y);
+            return insert(x, y, gen_data(x, y));
+        }
+
+        expand_root_(x, y);
         return root_node_->cache_search(x, y, gen_data);
     }
 
     private:
+    void expand_root_(int x, int y)
+    {
+        while (!root_node_->get_area().is_inside(x, y)) {
+            const auto &area = root_node_->get_area();
+            int nx = area.x;
+            int ny = area.y;
+            int nw = (area.w ? area.w : 1) * 2;
+            int nh = (area.h ? area.h : 1) * 2;
+            if (x < area.x || y < area.y) {
+                nx -= area.w;
+                ny -= area.h;
+            }
+            const NodeArea new_area(nx, ny, nw, nh);
+
+            std::array<std::unique_ptr<QuadtreeNode<T>>, 4> new_children{};
+            auto q = new_area.get_quadrant(area.x, area.y);
+            if (q == Quadrant::NONE)
+                throw std::logic_error("Could not find the correct quadrant");
+            new_children[q] = std::move(root_node_);
+
+            root_node_ = std::make_unique<QuadtreeNode<T>>(new_area, new_children);
+        }
+    }
+
     std::unique_ptr<QuadtreeNode<T>> root_node_;
 };
 
