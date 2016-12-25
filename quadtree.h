@@ -92,7 +92,7 @@ class QuadtreeNode {
             throw std::logic_error("Requested point not inside the search area");
 
         if (area_.x == x && area_.y == y && area_.w == 1 && area_.h == 1) {
-            data_ = data;
+            data_ = std::move(data);
             return this;
         }
 
@@ -169,9 +169,9 @@ class Quadtree {
     public:
     Quadtree() : root_node_(nullptr) { }
 
-    Quadtree(int x, int y, int w, int h)
+    Quadtree(std::unique_ptr<QuadtreeNode<T>> root_node)
     {
-        root_node_ = std::make_unique<QuadtreeNode<T>>(NodeArea(x, y, w, h));
+        root_node_ = std::move(root_node);
     }
 
     QuadtreeNode<T> *get_child(const Quadrant q)
