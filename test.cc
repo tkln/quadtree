@@ -7,6 +7,7 @@
 
 int main(int argc, char *argv[])
 {
+    using namespace quadtree;
     {
         NodeArea a(0, 0, 1, 1);
         assert(a.is_inside(0, 0));

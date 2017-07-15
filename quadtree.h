@@ -7,6 +7,8 @@
 #include <memory>
 
 
+namespace quadtree {
+
 /*
  * The coordinate system
  *
@@ -267,5 +269,7 @@ class Quadtree {
 
     std::unique_ptr<QuadtreeNode<T>> root_node_;
 };
+
+} // Quadtree
 
 #endif
