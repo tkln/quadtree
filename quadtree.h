@@ -6,7 +6,11 @@
 #include <functional>
 #include <memory>
 
-/*     |
+
+/*
+ * The coordinate system
+ *
+ *     |
  *  NW | NE x
  * ----+---->
  *  SW | SE
