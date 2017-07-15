@@ -205,5 +205,54 @@ int main(int argc, char *argv[])
         assert(root.search(1, 1)->get_data() == first);
         assert(root.search(2, 1)->get_data() == second);
     }
+    {
+        printf("\nCache search on empty tree\n");
+        int first = 'fi';
+        int second = 'se';
+        Quadtree<int> root;
+
+        assert(root.search(1, 1) == NULL);
+        assert(root.search(2, 1) == NULL);
+        assert(root.cache_search(1, 1, [=](int x, int y) { return first; }) != NULL);
+        assert(root.search(1, 1) != NULL);
+        root.cache_search(2, 1, [=](int x, int y) { return second; });
+        assert(root.search(2, 1) != NULL);
+        assert(root.search(1, 2) == NULL);
+        assert(root.search(1, 1)->get_data() == first);
+        assert(root.search(2, 1)->get_data() == second);
+    }
+    {
+        printf("\nCache search on empty tree with unique_ptr\n");
+        int first = 'fi';
+        int second = 'se';
+        Quadtree<std::unique_ptr<int>> root;
+
+        assert(root.search(1, 1) == NULL);
+        assert(root.search(2, 1) == NULL);
+        root.cache_search(1, 1, [=] (int x, int y) { return std::make_unique<int>(first); });
+        assert(root.search(1, 1) != NULL);
+        root.cache_search(2, 1, [=] (int x, int y) { return std::make_unique<int>(second); });
+        assert(root.search(2, 1) != NULL);
+        assert(root.search(1, 2) == NULL);
+        assert(*root.search(1, 1)->get_data().get() == first);
+        assert(*root.search(2, 1)->get_data().get() == second);
+    }
+    {
+        printf("\nCache search with a class\n");
+        struct S {
+            int i;
+        } first = {'fi'}, second = {'se'};
+        Quadtree<S> root;
+
+        assert(root.search(1, 1) == NULL);
+        assert(root.search(2, 1) == NULL);
+        root.cache_search(1, 1, [=](int x, int y) { return first; });
+        assert(root.search(1, 1) != NULL);
+        root.cache_search(2, 1, [=](int x, int y) { return second; });
+        assert(root.search(2, 1) != NULL);
+        assert(root.search(1, 2) == NULL);
+        assert(root.search(1, 1)->get_data().i == first.i);
+        assert(root.search(2, 1)->get_data().i == second.i);
+    }
     return EXIT_SUCCESS;
 }
